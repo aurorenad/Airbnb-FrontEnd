@@ -1,0 +1,29 @@
+.card {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid #f1f5f9;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    transition: box-shadow 0.3s, transform 0.3s;
+}
+
+.card:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+    transform: translateY(-3px);
+}
+
+/* Superhost cards get a gold accent border */
+.superhost {
+    border-color: #f59e0b;
+    border-width: 2px;
+}
+
+.saved {
+    outline: 2px solid #fb7185;
+    outline-offset: 0;
+}
+
+.booked {
+    opacity: 0.72;
+}

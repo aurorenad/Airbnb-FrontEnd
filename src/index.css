@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: 24 95% 53%;
+    /* Orange/Red from the image */
+    --primary-foreground: 0 0% 100%;
+  }
+
+  body {
+    @apply antialiased text-slate-900 dark:text-slate-100 dark:bg-slate-950;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #f7f3ef;
+  }
+
+  .dark body {
+    background-color: #020617;
+  }
+}
+
+.dark [style*="background-color: rgb(247, 243, 239)"],
+.dark [style*="background-color:#f7f3ef"],
+.dark [style*="background-color: #f7f3ef"],
+.dark [style*="backgroundColor: #f7f3ef"] {
+  background-color: #0f172a !important;
+}
+
+.dark [style*="background-color: rgba(247,243,239"],
+.dark [style*="background-color:rgba(247,243,239"] {
+  background-color: rgba(2, 6, 23, 0.92) !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  color: #f8fafc;
+  background-color: #0f172a;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+@layer components {
+  .nav-link {
+    @apply relative px-3 py-2 text-sm font-medium transition-colors hover:text-primary;
+  }
+
+  .nav-link-active {
+    @apply text-primary;
+  }
+}
+
+/* Dual range slider thumb styles */
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f43f5e;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.range-thumb::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f43f5e;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  pointer-events: all;
+}
