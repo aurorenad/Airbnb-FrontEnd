@@ -26,9 +26,11 @@ const SettingsPage = () => {
 
   return (
     <div className="max-w-3xl mx-auto py-6">
-      <div className="mb-6">
-        <p className="text-sm font-semibold" style={{ color: P }}>Preferences</p>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold" style={{ color: P }}>Preferences</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
+        </div>
       </div>
 
       <div className="rounded-lg border border-black/5 bg-white dark:bg-slate-900 shadow-sm divide-y divide-slate-100 dark:divide-slate-800">

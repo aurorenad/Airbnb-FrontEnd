@@ -16,9 +16,9 @@ interface ApiListing {
   guests: number;
   type: ApiListingType;
   amenities: string[];
-  rating: number | null;
   createdAt?: string;
   hostId?: string;
+  status?: "ACTIVE" | "PENDING" | "EXPIRED";
   host?: {
     name?: string | null;
   };
@@ -48,7 +48,7 @@ const CATEGORY_BY_TYPE: Record<ApiListingType, ListingCategory> = {
   APARTMENT: "apartment",
   HOUSE: "house",
   VILLA: "villa",
-  CABIN: "cabin"  
+  CABIN: "cabin"
 };
 
 const FALLBACK_IMAGES = [
@@ -88,6 +88,7 @@ export const mapApiListing = (listing: ApiListing): Listing => {
     guests: listing.guests,
     amenities: listing.amenities,
     hostId: listing.hostId,
+    status: listing.status ?? "ACTIVE",
   };
 };
 
@@ -120,4 +121,11 @@ export const uploadListingPhotos = async (listingId: ListingId, files: File[]): 
 
 export const deleteListing = async (listingId: ListingId) => {
   await api.delete(`/listings/${listingId}`);
+};
+
+export const fetchAdminListings = async (status: string): Promise<Listing[]> => {
+  const { data } = await api.get<ListingsResponse>("/listings/admin", {
+    params: { status, limit: 100 },
+  });
+  return data.data.map(mapApiListing);
 };

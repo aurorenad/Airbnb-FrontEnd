@@ -12,6 +12,7 @@ import Spinner from "../../../shared/components/Spinner";
 import { BookingForm } from "../../bookings";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { createListingReview, fetchListingReviews } from "../../dashboard/api/reviewsApi";
+import { fetchMyBookings } from "../../dashboard/api/bookingsApi";
 import toast from "react-hot-toast";
 
 const P = "#e8441a";
@@ -47,6 +48,16 @@ const ListingDetail = () => {
     },
     onError: () => toast.error("Failed to add review"),
   });
+
+  const myBookingsQuery = useQuery({
+    queryKey: ["my-bookings"],
+    queryFn: fetchMyBookings,
+    enabled: !!user,
+  });
+
+  const hasConfirmedBooking = myBookingsQuery.data?.some(
+    (b) => b.listing.id === listing?.id && b.status === "CONFIRMED"
+  );
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[400px]"><Spinner /></div>;
   if (isError || !listing) {
@@ -178,7 +189,7 @@ const ListingDetail = () => {
 
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-3">Reviews</h2>
-              {user && !isOwnListing && (
+              {user && !isOwnListing && hasConfirmedBooking && (
                 <form
                   onSubmit={(event) => {
                     event.preventDefault();

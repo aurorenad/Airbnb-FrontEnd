@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Heart, UserPlus, PlusCircle, Menu, X,
-  LogIn, LayoutDashboard, Home, LogOut, User,
+  LogIn, LayoutDashboard, Home, LogOut, User, Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NavLink, Link } from "react-router-dom";
@@ -19,7 +19,7 @@ interface NavbarProps {
 const Navbar = ({ savedCount, onOpenSaved }: NavbarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { isAuthenticated, user, isHost, logout } = useAuth();
+  const { isAuthenticated, user, isHost, isAdmin, logout } = useAuth();
 
   const menuItems = [
     { name: "Home", href: "/" },
@@ -82,7 +82,7 @@ const Navbar = ({ savedCount, onOpenSaved }: NavbarProps) => {
             {isAuthenticated ? (
               <>
                 {/* Guests: Become a Host CTA */}
-                {!isHost && (
+                {!isHost && !isAdmin && (
                   <NavLink to="/become-a-host"
                     className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-full border-2 transition-colors hover:bg-orange-50"
                     style={{ color: P, borderColor: P }}>
@@ -149,6 +149,11 @@ const Navbar = ({ savedCount, onOpenSaved }: NavbarProps) => {
                             onClick={() => setDropdownOpen(false)}
                             className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-black/5 transition-colors">
                             <User className="w-4 h-4" /> Edit Profile
+                          </Link>
+                          <Link to="/dashboard/settings"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-black/5 transition-colors">
+                            <Settings className="w-4 h-4" /> Settings
                           </Link>
                           <button onClick={handleLogout}
                             className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 transition-colors">
@@ -222,7 +227,7 @@ const Navbar = ({ savedCount, onOpenSaved }: NavbarProps) => {
 
                 {isAuthenticated ? (
                   <>
-                    {!isHost && (
+                    {!isHost && !isAdmin && (
                       <NavLink to="/become-a-host" onClick={() => setIsOpen(false)}
                         className="flex items-center gap-3 px-3 py-3 rounded-lg font-semibold border-2 transition-colors"
                         style={{ color: P, borderColor: P }}>

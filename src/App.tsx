@@ -26,12 +26,11 @@ const DashboardPage = lazy(() => import("./features/auth/pages/DashboardPage"));
 const DashboardHome = lazy(() =>
   import("./features/auth/pages/DashboardPage").then(m => ({ default: m.DashboardHome }))
 );
+const BookingsPage = lazy(() => import("./features/dashboard/pages/BookingsPage"));
 const EditProfilePage = lazy(() => import("./features/dashboard/pages/EditProfilePage"));
-const BookmarkPage = lazy(() => import("./features/dashboard/pages/BookmarkPage"));
 const MessagePage = lazy(() => import("./features/dashboard/pages/MessagePage"));
 const MyListingPage = lazy(() => import("./features/dashboard/pages/MyListingPage"));
 const ReviewsPage = lazy(() => import("./features/dashboard/pages/ReviewsPage"));
-const BookingsPage = lazy(() => import("./features/dashboard/pages/BookingsPage"));
 const WalletPage = lazy(() => import("./features/dashboard/pages/WalletPage"));
 const BecomeHostPage = lazy(() => import("./features/host/pages/BecomeHostPage"));
 const ManageUsersPage = lazy(() => import("./features/dashboard/pages/ManageUsersPage"));
@@ -97,12 +96,11 @@ const App = () => {
               }
             >
               <Route index element={<DashboardHome />} />
+              <Route path="bookings" element={<BookingsPage />} />
               <Route path="edit-profile" element={<EditProfilePage />} />
-              <Route path="bookmarks" element={<BookmarkPage />} />
               <Route path="messages" element={<MessagePage />} />
               <Route path="my-listings" element={<MyListingPage />} />
               <Route path="reviews" element={<ReviewsPage />} />
-              <Route path="bookings" element={<BookingsPage />} />
               <Route path="wallet" element={<WalletPage />} />
               <Route path="users" element={<ManageUsersPage />} />
               <Route path="settings" element={<SettingsPage />} />

@@ -38,3 +38,22 @@ export const sendMessage = async (receiverId: string, content: string) => {
   const { data } = await api.post<ApiMessage>("/messages", { receiverId, content });
   return data;
 };
+
+// Support: guest/host sends a message to the support inbox (any admin)
+// The backend should route this to a special "support" user or admin pool.
+// We use receiverId: "support" and let the backend resolve to an available admin.
+export const sendSupportMessage = async (content: string) => {
+  const { data } = await api.post<ApiMessage>("/messages/support", { content });
+  return data;
+};
+
+export const fetchSupportMessages = async () => {
+  const { data } = await api.get<ApiMessage[]>("/messages/support");
+  return data;
+};
+
+// Admin: fetch all support conversations across all users
+export const fetchAllSupportConversations = async () => {
+  const { data } = await api.get<Conversation[]>("/messages/support/conversations");
+  return data;
+};

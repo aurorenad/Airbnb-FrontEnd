@@ -20,4 +20,5 @@ export interface Listing {
   guests?: number;
   amenities?: string[];
   hostId?: string;
+  status?: "ACTIVE" | "PENDING" | "EXPIRED";
 }

@@ -1,28 +1,48 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
-import { sendAiChatMessage, type ChatMessage } from "../api/aiApi";
 import { useParams } from "react-router-dom";
 import { useListing } from "../hooks/useListing";
+import { useListings } from "../hooks/useListings";
+import { useStore } from "../../../store/StoreContext";
+import { sendAiChatMessage, type ChatMessage } from "../api/aiApi";
+import type { Listing } from "../types";
 
 const makeSessionId = () => `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 const P = "#e8441a";
 const P_LIGHT = "#fdf1ee";
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+// Build a compact listings context string to inject into every user message
+const buildListingsContext = (listings: Listing[]): string => {
+  if (!listings.length) return "";
+  const lines = listings.map((l) =>
+    `- ID:${l.id} | "${l.title}" | ${l.category} | $${l.price}/night | ${l.guests ?? "?"}g | ${l.location} | rating:${l.rating} | amenities:${(l.amenities ?? []).join(",")}`
+  );
+  return `\n\n[AVAILABLE LISTINGS IN OUR PLATFORM — only reference these, never external sources]\n${lines.join("\n")}\n[END LISTINGS]`;
+};
+
+// Inject context into user message before sending to AI
+const withContext = (message: string, context: string) =>
+  context ? `${message}${context}` : message;
+
+// ── Inner component ────────────────────────────────────────────────────────
+
 interface AiChatbotInnerProps {
   listingId?: string;
   listingTitle?: string;
+  listings: Listing[];
 }
 
-const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
-  // Greeting is computed once at init — no setState in effect needed
+const AiChatbotInner = ({ listingId, listingTitle, listings }: AiChatbotInnerProps) => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       role: "assistant",
       content: listingTitle
-        ? `Hi! 👋 I'm your AI assistant for **${listingTitle}**. Ask me anything about this listing — amenities, availability, location tips, and more!`
-        : "Hi! 👋 I'm your AI assistant. How can I help you find the perfect place?",
+        ? `Hi! 👋 I'm your AI assistant for **${listingTitle}**. Ask me anything about this listing — amenities, location, pricing, and more!`
+        : "Hi! 👋 I'm your AI assistant. I can help you find listings from our platform. Try asking for apartments, villas, or houses!",
     },
   ]);
   const [input, setInput] = useState("");
@@ -43,22 +63,31 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
     const text = input.trim();
     if (!text || loading) return;
 
+    // Show user's raw message in the UI
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await sendAiChatMessage(sessionId, text, listingId);
+      // Inject listings context into the message sent to the AI
+      // so it can only reference what's on the platform
+      const context = buildListingsContext(listings);
+      const messageWithContext = withContext(text, context);
+
+      const res = await sendAiChatMessage(sessionId, messageWithContext, listingId);
       setMessages((prev) => [...prev, { role: "assistant", content: res.response }]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I ran into an issue. Please try again in a moment." },
+        {
+          role: "assistant",
+          content: "Sorry, I ran into an issue. Please try again in a moment.",
+        },
       ]);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, sessionId, listingId]);
+  }, [input, loading, sessionId, listingId, listings]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -69,7 +98,7 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
 
   const suggestions = listingId
     ? ["What amenities are included?", "Is parking available?", "How far is the city centre?"]
-    : ["Find me an apartment in Kigali", "What villas are available?", "Houses under $150/night"];
+    : ["Show apartments in Kigali", "Villas under $300/night", "Best rated houses"];
 
   const hasUserMessage = messages.some((m) => m.role === "user");
 
@@ -82,28 +111,40 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
         style={{ backgroundColor: P }}
       >
-        {open ? <X className="w-6 h-6 text-white" /> : <MessageCircle className="w-6 h-6 text-white" />}
+        {open ? (
+          <X className="w-6 h-6 text-white" />
+        ) : (
+          <MessageCircle className="w-6 h-6 text-white" />
+        )}
         {!open && (
-          <span className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ backgroundColor: P }} />
+          <span
+            className="absolute inset-0 rounded-full animate-ping opacity-30"
+            style={{ backgroundColor: P }}
+          />
         )}
       </button>
 
       {/* Chat window */}
       <div
         className={`fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right ${
-          open ? "scale-100 opacity-100 pointer-events-auto" : "scale-90 opacity-0 pointer-events-none"
+          open
+            ? "scale-100 opacity-100 pointer-events-auto"
+            : "scale-90 opacity-0 pointer-events-none"
         }`}
         style={{ height: "520px", backgroundColor: "#fff" }}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ backgroundColor: P }}>
+        <div
+          className="flex items-center gap-3 px-4 py-3 shrink-0"
+          style={{ backgroundColor: P }}
+        >
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold text-sm leading-tight">AI Assistant</p>
             <p className="text-white/70 text-xs truncate">
-              {listingTitle ? `Helping with: ${listingTitle}` : "Ask me anything"}
+              {listingTitle ? `Helping with: ${listingTitle}` : `${listings.length} listings available`}
             </p>
           </div>
           <button
@@ -115,12 +156,20 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ backgroundColor: "#fafaf9" }}>
+        <div
+          className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+          style={{ backgroundColor: "#fafaf9" }}
+        >
           {messages.map((msg, i) => (
-            <div key={i} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+            <div
+              key={i}
+              className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+            >
               <div
                 className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-0.5"
-                style={{ backgroundColor: msg.role === "assistant" ? P_LIGHT : "#e2e8f0" }}
+                style={{
+                  backgroundColor: msg.role === "assistant" ? P_LIGHT : "#e2e8f0",
+                }}
               >
                 {msg.role === "assistant" ? (
                   <Bot className="w-4 h-4" style={{ color: P }} />
@@ -134,7 +183,9 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
                     ? "text-white rounded-tr-sm"
                     : "text-slate-700 rounded-tl-sm border border-slate-100"
                 }`}
-                style={{ backgroundColor: msg.role === "user" ? P : "#fff" }}
+                style={{
+                  backgroundColor: msg.role === "user" ? P : "#fff",
+                }}
               >
                 {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
                   part.startsWith("**") && part.endsWith("**") ? (
@@ -165,7 +216,10 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
 
         {/* Suggestions */}
         {!hasUserMessage && (
-          <div className="px-4 pb-2 flex flex-wrap gap-1.5 shrink-0" style={{ backgroundColor: "#fafaf9" }}>
+          <div
+            className="px-4 pb-2 flex flex-wrap gap-1.5 shrink-0"
+            style={{ backgroundColor: "#fafaf9" }}
+          >
             {suggestions.map((s) => (
               <button
                 key={s}
@@ -190,7 +244,7 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask me anything…"
+              placeholder="Ask about our listings…"
               className="flex-1 resize-none bg-transparent text-sm text-slate-700 placeholder-slate-400 focus:outline-none"
               style={{ maxHeight: 80 }}
             />
@@ -203,18 +257,33 @@ const AiChatbotInner = ({ listingId, listingTitle }: AiChatbotInnerProps) => {
               <Send className="w-4 h-4 text-white" />
             </button>
           </div>
-          <p className="text-center text-[10px] text-slate-300 mt-1.5">Powered by AI · Press Enter to send</p>
+          <p className="text-center text-[10px] text-slate-300 mt-1.5">
+            Powered by AI · Only shows our listings · Press Enter to send
+          </p>
         </div>
       </div>
     </>
   );
 };
 
-// Wrapper: auto-detects listing context from URL params
+// ── Wrapper — resolves listing context + injects all platform listings ──────
+
 const AiChatbot = () => {
   const { id } = useParams<{ id?: string }>();
-  const { data: listing } = useListing(id);
-  return <AiChatbotInner listingId={id} listingTitle={listing?.title} />;
+  const { data: currentListing } = useListing(id);
+
+  // Load all listings so the AI can reference them
+  useListings(); // ensures listings are fetched into the store
+  const { state } = useStore();
+  const listings = state.listings;
+
+  return (
+    <AiChatbotInner
+      listingId={id}
+      listingTitle={currentListing?.title}
+      listings={listings}
+    />
+  );
 };
 
 export default AiChatbot;

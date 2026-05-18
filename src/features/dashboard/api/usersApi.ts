@@ -24,6 +24,14 @@ export const fetchUsers = async () => {
   return data;
 };
 
+export const fetchUsersStats = async () => {
+  const { data } = await api.get<{
+    totalUsers: number;
+    byRole: { role: UserRole; _count: { role: number } }[];
+  }>("/users/stats");
+  return data;
+};
+
 export const updateUserRole = async (id: string, role: UserRole) => {
   const { data } = await api.put<AdminUser>(`/users/${id}`, { role });
   return data;
