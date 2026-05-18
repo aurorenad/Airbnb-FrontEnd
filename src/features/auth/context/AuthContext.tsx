@@ -1,38 +1,30 @@
-import { createContext, useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+// Fix: correct relative path from context/ to types.ts one level up
 import type { AuthUser, UserRole } from "../types";
 import { apiLogin, apiRegister, apiMe, type RegisterPayload } from "../api/authApi";
+import { AuthContext } from "./AuthContextProvider";
 
 const TOKEN_KEY = "auth_token";
 
-interface AuthContextType {
-  isAuthenticated: boolean;
-  user: AuthUser | null;
-  role: UserRole | null;
-  isHost: boolean;
-  isAdmin: boolean;
-  loading: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
-  logout: () => void;
-}
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(!!localStorage.getItem(TOKEN_KEY));
-  const [error, setError] = useState<string | null>(null);
+  const [user, setUser]       = useState<AuthUser | null>(null);
+  // Fix: initialize loading as false, set it inside the async flow only
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
 
-  // Restore session on mount if token exists
+  // Restore session on mount (silent initialization - no loading state)
+  const initRef = useRef(false);
   useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+    
     const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) { setLoading(false); return; }
+    if (!token) return;
+
     apiMe(token)
       .then(setUser)
-      .catch(() => localStorage.removeItem(TOKEN_KEY))
-      .finally(() => setLoading(false));
+      .catch(() => localStorage.removeItem(TOKEN_KEY));
   }, []);
 
   useEffect(() => {
@@ -51,7 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login failed";
       setError(msg);
-      throw new Error(msg);
+      // Fix: preserve caught error as cause
+      throw new Error(msg, { cause: err });
     } finally {
       setLoading(false);
     }
@@ -61,13 +54,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     setError(null);
     try {
-      // Register then auto-login
       await apiRegister(payload);
       await login(payload.email, payload.password);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Registration failed";
       setError(msg);
-      throw new Error(msg);
+      // Fix: preserve caught error as cause
+      throw new Error(msg, { cause: err });
     } finally {
       setLoading(false);
     }
@@ -79,13 +72,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
   };
 
+  const role = (user?.role as UserRole) ?? null;
+
   return (
     <AuthContext.Provider value={{
       isAuthenticated: !!user,
       user,
-      role: (user?.role as UserRole) ?? null,
-      isHost: user?.role === "HOST",
-      isAdmin: user?.role === "ADMIN" || user?.role === "SUPER_ADMIN",
+      role,
+      isHost:  role === "HOST",
+      isAdmin: role === "ADMIN" || role === "SUPER_ADMIN",
       loading,
       error,
       login,
@@ -96,3 +91,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     </AuthContext.Provider>
   );
 };
+
+// Re-export context from separate file to satisfy react-refresh
+export { AuthContext, type AuthContextType } from "./AuthContextProvider";

@@ -1,8 +1,17 @@
+import { useMemo } from "react";
 import { useStore } from "../../../store/StoreContext";
 import { ShoppingCart, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 const P = "#e8441a";
 const BG = "#f7f3ef";
+
+// Helper: generate a deterministic order ID from listing title
+const generateOrderId = (title: string, index: number): string => {
+  const charSum = Array.from(title).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const seed = charSum + index;
+  const pseudo = Math.sin(seed) * 10000;
+  return `#A${Math.floor(10000 + (pseudo % 90000))}`;
+};
 
 const WalletPage = () => {
     const { state } = useStore();
@@ -12,15 +21,15 @@ const WalletPage = () => {
     const pendingOrders = state.listings.filter(l => !l.featured).length;
     const totalOrders = state.listings.length;
 
-    const earningListings = state.listings.slice(0, 5).map(l => ({
+    const earningListings = useMemo(() => state.listings.slice(0, 5).map((l, i) => ({
         title: l.title,
         img: l.img,
         amount: l.price,
         fee: Math.round(l.price * 0.05),
         net: Math.round(l.price * 0.95),
-        order: `#A${Math.floor(10000 + Math.random() * 90000)}`,
+        order: generateOrderId(l.title, i),
         date: "05 Aug 2023",
-    }));
+    })), [state.listings]);
 
     const payouts = [
         { amount: 95.59, status: "Unpaid", period: 21.39, color: "#e8441a" },
