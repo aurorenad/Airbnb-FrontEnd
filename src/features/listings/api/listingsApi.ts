@@ -27,7 +27,7 @@ interface ApiListing {
     bookings?: number;
     reviews?: number;
   };
-  reviews?: unknown[];
+  reviews?: { rating?: number }[];
 }
 
 interface ListingsResponse {
@@ -46,9 +46,9 @@ export interface CreateListingPayload {
 
 const CATEGORY_BY_TYPE: Record<ApiListingType, ListingCategory> = {
   APARTMENT: "apartment",
-  HOUSE: "house",
-  VILLA: "villa",
-  CABIN: "cabin"
+  HOUSE:     "house",
+  VILLA:     "villa",
+  CABIN:     "cabin",
 };
 
 const FALLBACK_IMAGES = [
@@ -62,33 +62,47 @@ const hashString = (value: string) =>
   value.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
 
 const getListingImage = (listing: ApiListing) =>
-  listing.photos?.[0]?.url ?? FALLBACK_IMAGES[Math.abs(hashString(listing.id)) % FALLBACK_IMAGES.length];
+  listing.photos?.[0]?.url ??
+  FALLBACK_IMAGES[Math.abs(hashString(listing.id)) % FALLBACK_IMAGES.length];
+
+// Compute rating from reviews array if available
+const computeRating = (listing: ApiListing): number => {
+  if (Array.isArray(listing.reviews) && listing.reviews.length > 0) {
+    const sum = listing.reviews.reduce((acc, r) => acc + (r.rating ?? 0), 0);
+    return parseFloat((sum / listing.reviews.length).toFixed(1));
+  }
+  return 4.5; // fallback
+};
 
 export const mapApiListing = (listing: ApiListing): Listing => {
   const img = getListingImage(listing);
-  const reviews =
+  const reviewCount =
     listing._count?.reviews ??
     (Array.isArray(listing.reviews) ? listing.reviews.length : listing._count?.bookings ?? 0);
+  const rating = computeRating(listing);
 
   return {
-    id: listing.id,
-    title: listing.title,
-    location: listing.location,
-    price: listing.pricePerNight,
-    rating: listing.rating ?? 4.5,
-    reviews,
-    featured: (listing.rating ?? 0) >= 4.7,
-    verified: true,
+    id:          listing.id,
+    title:       listing.title,
+    location:    listing.location,
+    price:       listing.pricePerNight,
+    rating,
+    reviews:     reviewCount,
+    featured:    rating >= 4.7,
+    verified:    true,
     description: listing.description,
-    phone: listing.host?.name ? `Host: ${listing.host.name}` : "Contact host after booking",
+    phone:       listing.host?.name
+                   ? `Host: ${listing.host.name}`
+                   : "Contact host after booking",
     img,
-    images: listing.photos?.map((photo) => photo.url).filter(Boolean) ?? FALLBACK_IMAGES.filter((url) => url !== img),
-    category: CATEGORY_BY_TYPE[listing.type] ?? "apartments",
-    createdAt: listing.createdAt,
-    guests: listing.guests,
-    amenities: listing.amenities,
-    hostId: listing.hostId,
-    status: listing.status ?? "ACTIVE",
+    images:      listing.photos?.map((p) => p.url).filter(Boolean) ??
+                 FALLBACK_IMAGES.filter((u) => u !== img),
+    category:    CATEGORY_BY_TYPE[listing.type] ?? "apartment",
+    status:      listing.status ?? "ACTIVE",
+    createdAt:   listing.createdAt,
+    guests:      listing.guests,
+    amenities:   listing.amenities,
+    hostId:      listing.hostId,
   };
 };
 
@@ -96,7 +110,6 @@ export const fetchListings = async (): Promise<Listing[]> => {
   const { data } = await api.get<ListingsResponse>("/listings", {
     params: { limit: 100, sortBy: "createdAt", order: "desc" },
   });
-
   return data.data.map(mapApiListing);
 };
 
@@ -113,13 +126,11 @@ export const createListing = async (payload: CreateListingPayload): Promise<List
 export const uploadListingPhotos = async (listingId: ListingId, files: File[]): Promise<Listing> => {
   const formData = new FormData();
   files.slice(0, 5).forEach((file) => formData.append("photos", file));
-
   const { data } = await api.post<ApiListing>(`/upload/listings/${listingId}/photos`, formData);
-
   return mapApiListing(data);
 };
 
-export const deleteListing = async (listingId: ListingId) => {
+export const deleteListing = async (listingId: ListingId): Promise<void> => {
   await api.delete(`/listings/${listingId}`);
 };
 
